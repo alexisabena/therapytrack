@@ -1,0 +1,203 @@
+import type { DoseEvent, DueItem, DueState, Medication } from "./types";
+
+export const TIMEZONE = "America/Mexico_City";
+
+export function nowInTz(referenceDate: Date = new Date()) {
+  const dateStr = new Intl.DateTimeFormat("en-CA", {
+    timeZone: TIMEZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(referenceDate); // en-CA gives YYYY-MM-DD
+  const timeStr = new Intl.DateTimeFormat("en-GB", {
+    timeZone: TIMEZONE,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(referenceDate); // HH:mm
+  return { date: dateStr, time: timeStr };
+}
+
+function toMinutes(hhmm: string): number {
+  const [h, m] = hhmm.split(":").map(Number);
+  return h * 60 + m;
+}
+
+function addDays(dateStr: string, days: number): string {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  dt.setUTCDate(dt.getUTCDate() + days);
+  return dt.toISOString().slice(0, 10);
+}
+
+function daysBetween(fromStr: string, toStr: string): number {
+  const [fy, fm, fd] = fromStr.split("-").map(Number);
+  const [ty, tm, td] = toStr.split("-").map(Number);
+  const from = Date.UTC(fy, fm - 1, fd);
+  const to = Date.UTC(ty, tm - 1, td);
+  return Math.round((to - from) / 86400000);
+}
+
+function isWithinCourse(med: Medication, dateStr: string): boolean {
+  if (dateStr < med.start_date) return false;
+  if (med.course_end_date && dateStr > med.course_end_date) return false;
+  return true;
+}
+
+function classifyBySlotTime(scheduledTime: string, nowTime: string): DueState {
+  const diff = toMinutes(nowTime) - toMinutes(scheduledTime);
+  if (diff < -60) return "upcoming";
+  if (diff < 0) return "due_soon";
+  if (diff <= 30) return "due_now";
+  return "overdue";
+}
+
+function findEvent(
+  events: DoseEvent[],
+  medicationId: string,
+  scheduledDate: string,
+  scheduledTime: string | null
+): DoseEvent | null {
+  return (
+    events.find(
+      (e) =>
+        e.medication_id === medicationId &&
+        e.scheduled_date === scheduledDate &&
+        e.scheduled_time === scheduledTime
+    ) ?? null
+  );
+}
+
+/** Next weekly due date on/after `fromDate`, walking forward from the anchor. */
+export function nextWeeklyDueDate(med: Medication, fromDate: string): string | null {
+  if (!med.weekly_anchor_date) return null;
+  const interval = med.weekly_interval_days ?? 7;
+  const elapsed = daysBetween(med.weekly_anchor_date, fromDate);
+  if (elapsed < 0) return med.weekly_anchor_date;
+  const cyclesPassed = Math.floor(elapsed / interval);
+  let candidate = addDays(med.weekly_anchor_date, cyclesPassed * interval);
+  if (candidate < fromDate) candidate = addDays(candidate, interval);
+  return candidate;
+}
+
+/** All due-today items for the "Ahora" dashboard: fixed_times slots + weekly-if-due-today. PRN excluded (shown separately). */
+export function getDueItemsForToday(
+  medications: Medication[],
+  events: DoseEvent[],
+  now: { date: string; time: string }
+): DueItem[] {
+  const items: DueItem[] = [];
+
+  for (const med of medications) {
+    if (!med.active) continue;
+
+    if (med.schedule_type === "fixed_times") {
+      if (!isWithinCourse(med, now.date)) continue;
+      for (const time of med.times) {
+        const event = findEvent(events, med.id, now.date, time);
+        const state: DueState = event
+          ? event.status === "taken"
+            ? "done_taken"
+            : "done_skipped"
+          : classifyBySlotTime(time, now.time);
+        items.push({ medication: med, scheduledDate: now.date, scheduledTime: time, state, doseEvent: event });
+      }
+    }
+
+    if (med.schedule_type === "weekly") {
+      const due = nextWeeklyDueDate(med, now.date);
+      if (due !== now.date) continue;
+      if (!isWithinCourse(med, now.date)) continue;
+      const event = findEvent(events, med.id, now.date, null);
+      const state: DueState = event ? (event.status === "taken" ? "done_taken" : "done_skipped") : "due_now";
+      items.push({ medication: med, scheduledDate: now.date, scheduledTime: null, state, doseEvent: event });
+    }
+  }
+
+  return items.sort((a, b) => {
+    const order: Record<DueState, number> = {
+      overdue: 0,
+      due_now: 1,
+      due_soon: 2,
+      upcoming: 3,
+      done_taken: 4,
+      done_skipped: 4,
+    };
+    if (order[a.state] !== order[b.state]) return order[a.state] - order[b.state];
+    return (a.scheduledTime ?? "00:00").localeCompare(b.scheduledTime ?? "00:00");
+  });
+}
+
+export function activePrnMedications(medications: Medication[]): Medication[] {
+  return medications.filter((m) => m.active && m.schedule_type === "prn");
+}
+
+/** Full agenda for a given date, including meds outside today (for browsing other days) and weekly items even if not due. */
+export function getAgendaForDate(medications: Medication[], events: DoseEvent[], dateStr: string): DueItem[] {
+  const items: DueItem[] = [];
+  for (const med of medications) {
+    if (!med.active || med.schedule_type === "prn") continue;
+    if (!isWithinCourse(med, dateStr)) continue;
+
+    if (med.schedule_type === "fixed_times") {
+      for (const time of med.times) {
+        const event = findEvent(events, med.id, dateStr, time);
+        const state: DueState = event
+          ? event.status === "taken"
+            ? "done_taken"
+            : "done_skipped"
+          : "upcoming";
+        items.push({ medication: med, scheduledDate: dateStr, scheduledTime: time, state, doseEvent: event });
+      }
+    } else if (med.schedule_type === "weekly") {
+      const due = nextWeeklyDueDate(med, dateStr);
+      if (due !== dateStr) continue;
+      const event = findEvent(events, med.id, dateStr, null);
+      const state: DueState = event ? (event.status === "taken" ? "done_taken" : "done_skipped") : "upcoming";
+      items.push({ medication: med, scheduledDate: dateStr, scheduledTime: null, state, doseEvent: event });
+    }
+  }
+  return items.sort((a, b) => (a.scheduledTime ?? "00:00").localeCompare(b.scheduledTime ?? "00:00"));
+}
+
+/** Doses/day used for inventory burn-rate; null when it can't be derived (prn or missing dose size). */
+export function dosesPerDay(med: Medication): number | null {
+  if (med.schedule_type === "fixed_times") return med.times.length;
+  if (med.schedule_type === "weekly") return 1 / (med.weekly_interval_days ?? 7);
+  return null;
+}
+
+export function daysOfSupply(med: Medication): number | null {
+  if (med.units_on_hand == null || med.units_per_dose == null) return null;
+  const perDay = dosesPerDay(med);
+  if (!perDay) return null;
+  const dailyUnits = perDay * med.units_per_dose;
+  if (dailyUnits <= 0) return null;
+  return med.units_on_hand / dailyUnits;
+}
+
+export function courseRemainingDays(med: Medication, todayStr: string): number | null {
+  if (!med.course_end_date) return null;
+  const remaining = daysBetween(todayStr, med.course_end_date);
+  return remaining < 0 ? 0 : remaining;
+}
+
+export type StockFlag = { low: boolean; reason: string | null };
+
+/** Flags when supply won't outlast the threshold window, or won't cover the rest of a finite course. */
+export function stockFlag(med: Medication, todayStr: string): StockFlag {
+  const supply = daysOfSupply(med);
+  if (supply == null) return { low: false, reason: null };
+
+  const remaining = courseRemainingDays(med, todayStr);
+  if (remaining != null && supply < remaining) {
+    return {
+      low: true,
+      reason: `Alcanza para ~${Math.floor(supply)} dias, pero el tratamiento continua ${remaining} dias mas`,
+    };
+  }
+  if (supply < med.low_stock_threshold_days) {
+    return { low: true, reason: `Alcanza para ~${Math.floor(supply)} dias` };
+  }
+  return { low: false, reason: null };
+}
