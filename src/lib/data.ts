@@ -51,6 +51,28 @@ export async function getMedicationStatusEvents(): Promise<MedicationStatusEvent
   return data as MedicationStatusEvent[];
 }
 
+/** Every distinct caregiver name that's actually logged something, so the "who are you" picker is
+ * shared across devices instead of hardcoded — the app-wide fix for names not carrying over between
+ * phones and typo'd names silently fragmenting the same person into separate entries. */
+export async function getKnownCaregivers(): Promise<string[]> {
+  const supabase = await createClient();
+  const [doseRes, statusRes] = await Promise.all([
+    supabase.from("dose_events").select("caregiver_name"),
+    supabase.from("medication_status_events").select("caregiver_name"),
+  ]);
+  if (doseRes.error) throw doseRes.error;
+  if (statusRes.error) throw statusRes.error;
+
+  const seen = new Map<string, string>();
+  for (const row of [...doseRes.data, ...statusRes.data]) {
+    const name = (row.caregiver_name as string | null)?.trim();
+    if (!name || name === "Sin nombre") continue;
+    const key = name.toLowerCase();
+    if (!seen.has(key)) seen.set(key, name);
+  }
+  return Array.from(seen.values()).sort((a, b) => a.localeCompare(b, "es"));
+}
+
 export async function getRecentEvents(limit = 100): Promise<(DoseEvent & { medication: Medication })[]> {
   const supabase = await createClient();
   const { data, error } = await supabase

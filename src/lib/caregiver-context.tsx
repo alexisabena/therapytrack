@@ -3,7 +3,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 
 const STORAGE_KEY = "tt_caregiver_name";
-const KNOWN_CAREGIVERS = ["Alexis", "Otro cuidador"];
 
 type CaregiverContextValue = {
   name: string | null;
@@ -16,7 +15,13 @@ export function useCaregiver() {
   return useContext(CaregiverContext);
 }
 
-export function CaregiverProvider({ children }: { children: React.ReactNode }) {
+export function CaregiverProvider({
+  knownCaregivers,
+  children,
+}: {
+  knownCaregivers: string[];
+  children: React.ReactNode;
+}) {
   const [name, setNameState] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
 
@@ -35,13 +40,13 @@ export function CaregiverProvider({ children }: { children: React.ReactNode }) {
   if (!hydrated) return null;
 
   if (!name) {
-    return <NamePrompt onSelect={setName} />;
+    return <NamePrompt knownCaregivers={knownCaregivers} onSelect={setName} />;
   }
 
   return <CaregiverContext.Provider value={{ name, setName }}>{children}</CaregiverContext.Provider>;
 }
 
-function NamePrompt({ onSelect }: { onSelect: (name: string) => void }) {
+function NamePrompt({ knownCaregivers, onSelect }: { knownCaregivers: string[]; onSelect: (name: string) => void }) {
   const [custom, setCustom] = useState("");
 
   return (
@@ -52,7 +57,7 @@ function NamePrompt({ onSelect }: { onSelect: (name: string) => void }) {
           Para saber quien confirmo cada dosis. Se recuerda en este telefono.
         </p>
         <div className="space-y-2 mb-4">
-          {KNOWN_CAREGIVERS.map((n) => (
+          {knownCaregivers.map((n) => (
             <button
               key={n}
               onClick={() => onSelect(n)}

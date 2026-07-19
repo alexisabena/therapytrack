@@ -3,7 +3,6 @@ import { getAllMedications, getEventsForDate, getEventsForDateRange, getMedicati
 import { activePrnMedications, addDays, getDueItemsForToday, nowInTz, stockFlag, summarizeDay } from "@/lib/schedule";
 import { DoseCard } from "@/components/dose-card";
 import { PrnCard } from "@/components/prn-card";
-import { AutoRefresh } from "@/components/auto-refresh";
 import { PastDaysSummary } from "@/components/past-days-summary";
 import Link from "next/link";
 
@@ -43,7 +42,6 @@ export default async function AhoraPage() {
 
   return (
     <div className="px-4 pt-6 space-y-5">
-      <AutoRefresh />
       <header>
         <p className="text-sm text-neutral-500 capitalize">{weekday}, {now.date.split("-").reverse().join("/")}</p>
         <h1 className="text-2xl font-bold text-neutral-900">Ahora — {now.time}</h1>
