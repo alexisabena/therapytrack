@@ -101,3 +101,25 @@ export async function adjustUnitsAction(medicationId: string, newUnits: number) 
   if (error) throw error;
   revalidateAll();
 }
+
+/** Additive restock: caregiver enters how many NEW units they just bought, added to current stock.
+ * No recounting the full stock by hand — the swipe-confirm before/after display already handles
+ * dose-level accuracy, so this only needs to answer "how many did we add." */
+export async function restockUnitsAction(medicationId: string, addedUnits: number) {
+  const supabase = await createClient();
+  const medication = await getMedication(medicationId);
+
+  if (medication.units_on_hand == null) {
+    // Nothing to add to yet (existence was never registered) — treat as first registration.
+    const { error } = await supabase
+      .from("medications")
+      .update({ units_on_hand: addedUnits })
+      .eq("id", medicationId);
+    if (error) throw error;
+  } else {
+    const { error } = await supabase.rpc("increment_units", { med_id: medicationId, amount: addedUnits });
+    if (error) throw error;
+  }
+
+  revalidateAll();
+}

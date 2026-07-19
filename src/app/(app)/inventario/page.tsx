@@ -15,7 +15,7 @@ export default async function InventarioPage() {
     <div className="px-4 pt-6 space-y-5">
       <header>
         <h1 className="text-2xl font-bold text-neutral-900">Existencia</h1>
-        <p className="text-sm text-neutral-500">Toca la cantidad para corregirla despues de comprar mas.</p>
+        <p className="text-sm text-neutral-500">Agrega lo que compraste — no hace falta recontar todo.</p>
       </header>
 
       {lowStock.length > 0 && (

@@ -3,6 +3,7 @@
 create or replace function decrement_units(med_id uuid, amount numeric)
 returns void
 language sql
+set search_path = public
 as $$
   update medications
   set units_on_hand = greatest(coalesce(units_on_hand, 0) - amount, 0)
@@ -12,6 +13,7 @@ $$;
 create or replace function increment_units(med_id uuid, amount numeric)
 returns void
 language sql
+set search_path = public
 as $$
   update medications
   set units_on_hand = coalesce(units_on_hand, 0) + amount

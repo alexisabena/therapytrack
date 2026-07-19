@@ -19,7 +19,7 @@ create table if not exists medications (
   is_chronic boolean not null default false,
   start_date date not null,
   course_end_date date,                    -- computed where determinable; null = open-ended/unknown
-  units_per_dose numeric not null default 1,
+  units_per_dose numeric,                  -- null = manual tracking only (dose unit doesn't match stock unit, e.g. drops vs ml)
   units_on_hand numeric,                   -- null = unknown/untracked
   units_label text not null default 'unidades',
   low_stock_threshold_days numeric not null default 5,
