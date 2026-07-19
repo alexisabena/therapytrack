@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { getAllMedications, getEventsForDate } from "@/lib/data";
-import { activePrnMedications, getAgendaForDate, nowInTz } from "@/lib/schedule";
+import { getAllMedications, getEventsForDate, getMedicationStatusEvents } from "@/lib/data";
+import { activePrnMedicationsOnDate, getAgendaForDate, nowInTz } from "@/lib/schedule";
 import { DoseCard } from "@/components/dose-card";
 
 export const dynamic = "force-dynamic";
@@ -24,9 +24,15 @@ export default async function AgendaPage({
   const today = nowInTz().date;
   const date = dateParam ?? today;
 
-  const [medications, events] = await Promise.all([getAllMedications(), getEventsForDate(date)]);
-  const items = getAgendaForDate(medications, events, date);
-  const prnMeds = activePrnMedications(medications).filter((m) => m.start_date <= date && (!m.course_end_date || m.course_end_date >= date));
+  const [medications, events, statusEvents] = await Promise.all([
+    getAllMedications(),
+    getEventsForDate(date),
+    getMedicationStatusEvents(),
+  ]);
+  const items = getAgendaForDate(medications, events, statusEvents, date);
+  const prnMeds = activePrnMedicationsOnDate(medications, statusEvents, date).filter(
+    (m) => m.start_date <= date && (!m.course_end_date || m.course_end_date >= date)
+  );
 
   const [y, m, d] = date.split("-").map(Number);
   const weekday = WEEKDAYS[new Date(Date.UTC(y, m - 1, d)).getUTCDay()];

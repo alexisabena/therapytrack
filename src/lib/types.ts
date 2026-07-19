@@ -39,6 +39,14 @@ export type DoseEvent = {
   created_at: string;
 };
 
+export type MedicationStatusEvent = {
+  id: string;
+  medication_id: string;
+  active: boolean;
+  changed_at: string;
+  caregiver_name: string;
+};
+
 export type DueState =
   | "overdue"
   | "due_now"

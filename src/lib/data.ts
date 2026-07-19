@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import type { DoseEvent, Medication } from "./types";
+import type { DoseEvent, Medication, MedicationStatusEvent } from "./types";
 
 export async function getActiveMedications(): Promise<Medication[]> {
   const supabase = await createClient();
@@ -38,6 +38,17 @@ export async function getEventsForDateRange(fromDate: string, toDate: string): P
     .lte("scheduled_date", toDate);
   if (error) throw error;
   return data as DoseEvent[];
+}
+
+/** Full toggle history for all medications — small table, no pagination needed for a household tracker. */
+export async function getMedicationStatusEvents(): Promise<MedicationStatusEvent[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("medication_status_events")
+    .select("*")
+    .order("changed_at", { ascending: true });
+  if (error) throw error;
+  return data as MedicationStatusEvent[];
 }
 
 export async function getRecentEvents(limit = 100): Promise<(DoseEvent & { medication: Medication })[]> {

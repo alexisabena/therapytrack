@@ -1,11 +1,11 @@
-import { getAllMedications } from "@/lib/data";
+import { getAllMedications, getMedicationStatusEvents } from "@/lib/data";
 import { MedicationRow } from "@/components/medication-row";
 import { AddMedicationButton } from "@/components/add-medication-button";
 
 export const dynamic = "force-dynamic";
 
 export default async function MedicamentosPage() {
-  const medications = await getAllMedications();
+  const [medications, statusEvents] = await Promise.all([getAllMedications(), getMedicationStatusEvents()]);
   const active = medications.filter((m) => m.active);
   const inactive = medications.filter((m) => !m.active);
 
@@ -27,7 +27,11 @@ export default async function MedicamentosPage() {
         ) : (
           <div className="space-y-3">
             {active.map((med) => (
-              <MedicationRow key={med.id} medication={med} />
+              <MedicationRow
+                key={med.id}
+                medication={med}
+                statusEvents={statusEvents.filter((e) => e.medication_id === med.id)}
+              />
             ))}
           </div>
         )}
@@ -38,7 +42,11 @@ export default async function MedicamentosPage() {
           <h2 className="text-sm font-bold uppercase tracking-wide text-neutral-500 mb-2">Fuera de rotacion</h2>
           <div className="space-y-3">
             {inactive.map((med) => (
-              <MedicationRow key={med.id} medication={med} />
+              <MedicationRow
+                key={med.id}
+                medication={med}
+                statusEvents={statusEvents.filter((e) => e.medication_id === med.id)}
+              />
             ))}
           </div>
         </section>

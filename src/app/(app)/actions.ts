@@ -110,10 +110,15 @@ export async function updateMedicationAction(medicationId: string, input: Medica
   revalidateAll();
 }
 
-/** Soft removal: takes a medication out of rotation (Ahora/Agenda) while keeping its dose history and stock on hand. Reversible. */
-export async function setMedicationActiveAction(medicationId: string, active: boolean) {
+/** Soft removal: takes a medication out of rotation (Ahora/Agenda) while keeping its dose history and stock on hand.
+ * Reversible, and logs the transition so past-date views can tell what was active on any given day. */
+export async function setMedicationActiveAction(medicationId: string, active: boolean, caregiverName: string) {
   const supabase = await createClient();
-  const { error } = await supabase.from("medications").update({ active }).eq("id", medicationId);
+  const { error } = await supabase.rpc("set_medication_active", {
+    med_id: medicationId,
+    new_active: active,
+    caregiver: caregiverName || "Sin nombre",
+  });
   if (error) throw error;
   revalidateAll();
 }

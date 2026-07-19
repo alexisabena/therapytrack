@@ -1,4 +1,4 @@
-import type { DoseEvent, DueItem, DueState, Medication } from "./types";
+import type { DoseEvent, DueItem, DueState, Medication, MedicationStatusEvent } from "./types";
 
 export const TIMEZONE = "America/Mexico_City";
 
@@ -150,11 +150,39 @@ export function activePrnMedications(medications: Medication[]): Medication[] {
   return medications.filter((m) => m.active && m.schedule_type === "prn");
 }
 
+/**
+ * Whether a medication was active on a given calendar day, based on its toggle history
+ * rather than its current `active` flag. The latest event at/before that date wins (so
+ * several toggles on the same day resolve to whichever happened last); with no events
+ * yet, it defaults to active, matching how a medication starts out when created.
+ */
+export function isActiveOnDate(statusEvents: MedicationStatusEvent[], medicationId: string, dateStr: string): boolean {
+  const relevant = statusEvents
+    .filter((e) => e.medication_id === medicationId && nowInTz(new Date(e.changed_at)).date <= dateStr)
+    .sort((a, b) => a.changed_at.localeCompare(b.changed_at));
+  if (relevant.length === 0) return true;
+  return relevant[relevant.length - 1].active;
+}
+
+/** PRN meds in effect on a given date (date-aware version of activePrnMedications, for browsing past/other days). */
+export function activePrnMedicationsOnDate(
+  medications: Medication[],
+  statusEvents: MedicationStatusEvent[],
+  dateStr: string
+): Medication[] {
+  return medications.filter((m) => m.schedule_type === "prn" && isActiveOnDate(statusEvents, m.id, dateStr));
+}
+
 /** Full agenda for a given date, including meds outside today (for browsing other days) and weekly items even if not due. */
-export function getAgendaForDate(medications: Medication[], events: DoseEvent[], dateStr: string): DueItem[] {
+export function getAgendaForDate(
+  medications: Medication[],
+  events: DoseEvent[],
+  statusEvents: MedicationStatusEvent[],
+  dateStr: string
+): DueItem[] {
   const items: DueItem[] = [];
   for (const med of medications) {
-    if (!med.active || med.schedule_type === "prn") continue;
+    if (med.schedule_type === "prn" || !isActiveOnDate(statusEvents, med.id, dateStr)) continue;
     if (!isWithinCourse(med, dateStr)) continue;
 
     if (med.schedule_type === "fixed_times") {
@@ -209,8 +237,13 @@ export type DaySummary = {
 };
 
 /** Administered/omitted/pending counts for a given day, for the "dias anteriores" lookback on the home screen. */
-export function summarizeDay(medications: Medication[], events: DoseEvent[], dateStr: string): DaySummary {
-  const items = getAgendaForDate(medications, events, dateStr);
+export function summarizeDay(
+  medications: Medication[],
+  events: DoseEvent[],
+  statusEvents: MedicationStatusEvent[],
+  dateStr: string
+): DaySummary {
+  const items = getAgendaForDate(medications, events, statusEvents, dateStr);
   let administered = 0;
   let omitted = 0;
   let pending = 0;
