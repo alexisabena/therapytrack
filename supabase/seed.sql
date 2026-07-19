@@ -95,6 +95,10 @@ values
    'Existencia no reportada en la receta original — registrar manualmente en Inventario.')
 on conflict (id) do nothing;
 
+-- Clonazepam is no longer given. Deactivated rather than deleted: keeps dose history
+-- and unit count intact (traceability), just removed from the active rotation.
+update medications set active = false where id = '11111111-1111-1111-1111-111111111101';
+
 -- Historical record: Soloro 7 was already applied 2026-07-17, before this app existed.
 insert into dose_events (medication_id, scheduled_date, scheduled_time, status, actual_at, caregiver_name, notes)
 values

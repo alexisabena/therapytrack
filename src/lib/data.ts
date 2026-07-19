@@ -29,6 +29,17 @@ export async function getEventsForDate(dateStr: string): Promise<DoseEvent[]> {
   return data as DoseEvent[];
 }
 
+export async function getEventsForDateRange(fromDate: string, toDate: string): Promise<DoseEvent[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("dose_events")
+    .select("*")
+    .gte("scheduled_date", fromDate)
+    .lte("scheduled_date", toDate);
+  if (error) throw error;
+  return data as DoseEvent[];
+}
+
 export async function getRecentEvents(limit = 100): Promise<(DoseEvent & { medication: Medication })[]> {
   const supabase = await createClient();
   const { data, error } = await supabase

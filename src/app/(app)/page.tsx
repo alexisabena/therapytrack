@@ -1,18 +1,32 @@
 import { AlertTriangle } from "lucide-react";
-import { getActiveMedications, getEventsForDate } from "@/lib/data";
-import { activePrnMedications, getDueItemsForToday, nowInTz, stockFlag } from "@/lib/schedule";
+import { getActiveMedications, getEventsForDate, getEventsForDateRange } from "@/lib/data";
+import { activePrnMedications, addDays, getDueItemsForToday, nowInTz, stockFlag, summarizeDay } from "@/lib/schedule";
 import { DoseCard } from "@/components/dose-card";
 import { PrnCard } from "@/components/prn-card";
 import { AutoRefresh } from "@/components/auto-refresh";
+import { PastDaysSummary } from "@/components/past-days-summary";
 import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
 const WEEKDAYS = ["domingo", "lunes", "martes", "miercoles", "jueves", "viernes", "sabado"];
 
+function weekdayFor(dateStr: string): string {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return WEEKDAYS[new Date(Date.UTC(y, m - 1, d)).getUTCDay()];
+}
+
+const LOOKBACK_DAYS = 3;
+
 export default async function AhoraPage() {
   const now = nowInTz();
-  const [medications, events] = await Promise.all([getActiveMedications(), getEventsForDate(now.date)]);
+  const lookbackFrom = addDays(now.date, -LOOKBACK_DAYS);
+  const lookbackTo = addDays(now.date, -1);
+  const [medications, events, pastEvents] = await Promise.all([
+    getActiveMedications(),
+    getEventsForDate(now.date),
+    getEventsForDateRange(lookbackFrom, lookbackTo),
+  ]);
   const dueItems = getDueItemsForToday(medications, events, now);
   const prnMeds = activePrnMedications(medications);
   const lowStock = medications.filter((m) => stockFlag(m, now.date).low);
@@ -20,8 +34,11 @@ export default async function AhoraPage() {
   const pending = dueItems.filter((i) => i.state !== "done_taken" && i.state !== "done_skipped");
   const done = dueItems.filter((i) => i.state === "done_taken" || i.state === "done_skipped");
 
-  const [y, m, d] = now.date.split("-").map(Number);
-  const weekday = WEEKDAYS[new Date(Date.UTC(y, m - 1, d)).getUTCDay()];
+  const pastDays = Array.from({ length: LOOKBACK_DAYS }, (_, i) => addDays(now.date, -(i + 1)))
+    .map((date) => summarizeDay(medications, pastEvents, date))
+    .filter((summary) => summary.total > 0);
+
+  const weekday = weekdayFor(now.date);
 
   return (
     <div className="px-4 pt-6 space-y-5">
@@ -43,6 +60,8 @@ export default async function AhoraPage() {
           </p>
         </Link>
       )}
+
+      <PastDaysSummary days={pastDays} />
 
       {pending.length === 0 && (
         <p className="text-sm text-neutral-500 bg-white rounded-2xl border border-neutral-200 px-4 py-6 text-center">

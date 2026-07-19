@@ -3,12 +3,14 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { nowInTz } from "@/lib/schedule";
+import type { Medication } from "@/lib/types";
 
 function revalidateAll() {
   revalidatePath("/");
   revalidatePath("/agenda");
   revalidatePath("/inventario");
   revalidatePath("/historial");
+  revalidatePath("/medicamentos");
 }
 
 async function getMedication(medicationId: string) {
@@ -89,6 +91,30 @@ export async function undoDoseAction(eventId: string) {
     }
   }
 
+  revalidateAll();
+}
+
+export type MedicationInput = Omit<Medication, "id" | "created_at" | "active">;
+
+export async function createMedicationAction(input: MedicationInput) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("medications").insert({ ...input, active: true });
+  if (error) throw error;
+  revalidateAll();
+}
+
+export async function updateMedicationAction(medicationId: string, input: MedicationInput) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("medications").update(input).eq("id", medicationId);
+  if (error) throw error;
+  revalidateAll();
+}
+
+/** Soft removal: takes a medication out of rotation (Ahora/Agenda) while keeping its dose history and stock on hand. Reversible. */
+export async function setMedicationActiveAction(medicationId: string, active: boolean) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("medications").update({ active }).eq("id", medicationId);
+  if (error) throw error;
   revalidateAll();
 }
 

@@ -18,12 +18,30 @@ export function nowInTz(referenceDate: Date = new Date()) {
   return { date: dateStr, time: timeStr };
 }
 
-function toMinutes(hhmm: string): number {
+export function toMinutes(hhmm: string): number {
   const [h, m] = hhmm.split(":").map(Number);
   return h * 60 + m;
 }
 
-function addDays(dateStr: string, days: number): string {
+function minutesToHHMM(totalMinutes: number): string {
+  const m = ((totalMinutes % 1440) + 1440) % 1440;
+  const h = Math.floor(m / 60);
+  const min = m % 60;
+  return `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
+}
+
+/** Fixed daily clock slots for "every N hours" dosing, starting at anchorTime and repeating through the day. */
+export function generateIntervalTimes(intervalHours: number, anchorTime: string): string[] {
+  const slotCount = Math.max(1, Math.round(24 / intervalHours));
+  const start = toMinutes(anchorTime);
+  const times: string[] = [];
+  for (let i = 0; i < slotCount; i++) {
+    times.push(minutesToHHMM(start + i * intervalHours * 60));
+  }
+  return times.sort();
+}
+
+export function addDays(dateStr: string, days: number): string {
   const [y, m, d] = dateStr.split("-").map(Number);
   const dt = new Date(Date.UTC(y, m - 1, d));
   dt.setUTCDate(dt.getUTCDate() + days);
@@ -180,6 +198,28 @@ export function courseRemainingDays(med: Medication, todayStr: string): number |
   if (!med.course_end_date) return null;
   const remaining = daysBetween(todayStr, med.course_end_date);
   return remaining < 0 ? 0 : remaining;
+}
+
+export type DaySummary = {
+  date: string;
+  administered: number;
+  omitted: number;
+  pending: number;
+  total: number;
+};
+
+/** Administered/omitted/pending counts for a given day, for the "dias anteriores" lookback on the home screen. */
+export function summarizeDay(medications: Medication[], events: DoseEvent[], dateStr: string): DaySummary {
+  const items = getAgendaForDate(medications, events, dateStr);
+  let administered = 0;
+  let omitted = 0;
+  let pending = 0;
+  for (const item of items) {
+    if (item.doseEvent?.status === "taken") administered++;
+    else if (item.doseEvent?.status === "skipped") omitted++;
+    else pending++;
+  }
+  return { date: dateStr, administered, omitted, pending, total: items.length };
 }
 
 export type StockFlag = { low: boolean; reason: string | null };
