@@ -2,14 +2,23 @@
 
 import { useState, useTransition } from "react";
 import { AlertTriangle, Clock, Pencil, Plus } from "lucide-react";
-import type { Medication } from "@/lib/types";
+import type { Medication, MedicationStatusEvent } from "@/lib/types";
 import { daysOfSupply, stockFlag } from "@/lib/schedule";
 import { adjustUnitsAction, restockUnitsAction } from "@/app/(app)/actions";
 import { MedicationForm } from "./medication-form";
+import { MedicationActiveToggle } from "./medication-active-toggle";
 
 type Mode = "view" | "restock" | "correct";
 
-export function InventoryRow({ medication, today }: { medication: Medication; today: string }) {
+export function InventoryRow({
+  medication,
+  today,
+  statusEvents,
+}: {
+  medication: Medication;
+  today: string;
+  statusEvents: MedicationStatusEvent[];
+}) {
   const [mode, setMode] = useState<Mode>("view");
   const [restockValue, setRestockValue] = useState("");
   const [correctValue, setCorrectValue] = useState(String(medication.units_on_hand ?? ""));
@@ -53,7 +62,6 @@ export function InventoryRow({ medication, today }: { medication: Medication; to
             <span className="text-sm text-neutral-500">{medication.strength}</span>
           </div>
           <p className="text-xs text-neutral-500 mt-0.5">{medication.duration_description}</p>
-          {!medication.active && <p className="text-xs font-semibold text-neutral-500 mt-0.5">Fuera de rotacion</p>}
         </div>
         {flag.low && <AlertTriangle size={20} className="text-amber-600 shrink-0" />}
       </div>
@@ -73,6 +81,10 @@ export function InventoryRow({ medication, today }: { medication: Medication; to
       {medication.units_on_hand == null && mode === "view" && (
         <p className="text-xs text-neutral-400 mt-1.5">Existencia no registrada</p>
       )}
+
+      <div className="mt-3">
+        <MedicationActiveToggle medication={medication} statusEvents={statusEvents} />
+      </div>
 
       {mode === "view" && (
         <div className="mt-3 flex gap-2">

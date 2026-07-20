@@ -1,4 +1,4 @@
-import { getAllMedications } from "@/lib/data";
+import { getAllMedications, getMedicationStatusEvents } from "@/lib/data";
 import { nowInTz, stockFlag } from "@/lib/schedule";
 import { InventoryRow } from "@/components/inventory-row";
 
@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 export default async function InventarioPage() {
   const today = nowInTz().date;
-  const allMedications = await getAllMedications();
+  const [allMedications, statusEvents] = await Promise.all([getAllMedications(), getMedicationStatusEvents()]);
   const medications = allMedications.filter((m) => m.active);
   const inactive = allMedications.filter((m) => !m.active);
 
@@ -25,7 +25,12 @@ export default async function InventarioPage() {
           <h2 className="text-sm font-bold uppercase tracking-wide text-amber-700 mb-2">Por agotarse</h2>
           <div className="space-y-3">
             {lowStock.map((med) => (
-              <InventoryRow key={med.id} medication={med} today={today} />
+              <InventoryRow
+                key={med.id}
+                medication={med}
+                today={today}
+                statusEvents={statusEvents.filter((e) => e.medication_id === med.id)}
+              />
             ))}
           </div>
         </section>
@@ -35,7 +40,12 @@ export default async function InventarioPage() {
         <h2 className="text-sm font-bold uppercase tracking-wide text-neutral-500 mb-2">Todos los medicamentos</h2>
         <div className="space-y-3">
           {ok.map((med) => (
-            <InventoryRow key={med.id} medication={med} today={today} />
+            <InventoryRow
+              key={med.id}
+              medication={med}
+              today={today}
+              statusEvents={statusEvents.filter((e) => e.medication_id === med.id)}
+            />
           ))}
         </div>
       </section>
@@ -45,7 +55,12 @@ export default async function InventarioPage() {
           <h2 className="text-sm font-bold uppercase tracking-wide text-neutral-500 mb-2">Fuera de rotacion</h2>
           <div className="space-y-3">
             {inactive.map((med) => (
-              <InventoryRow key={med.id} medication={med} today={today} />
+              <InventoryRow
+                key={med.id}
+                medication={med}
+                today={today}
+                statusEvents={statusEvents.filter((e) => e.medication_id === med.id)}
+              />
             ))}
           </div>
         </section>
