@@ -1,4 +1,4 @@
-import { getActiveMedications } from "@/lib/data";
+import { getAllMedications } from "@/lib/data";
 import { nowInTz, stockFlag } from "@/lib/schedule";
 import { InventoryRow } from "@/components/inventory-row";
 
@@ -6,7 +6,9 @@ export const dynamic = "force-dynamic";
 
 export default async function InventarioPage() {
   const today = nowInTz().date;
-  const medications = await getActiveMedications();
+  const allMedications = await getAllMedications();
+  const medications = allMedications.filter((m) => m.active);
+  const inactive = allMedications.filter((m) => !m.active);
 
   const lowStock = medications.filter((m) => stockFlag(m, today).low);
   const ok = medications.filter((m) => !stockFlag(m, today).low);
@@ -37,6 +39,17 @@ export default async function InventarioPage() {
           ))}
         </div>
       </section>
+
+      {inactive.length > 0 && (
+        <section>
+          <h2 className="text-sm font-bold uppercase tracking-wide text-neutral-500 mb-2">Fuera de rotacion</h2>
+          <div className="space-y-3">
+            {inactive.map((med) => (
+              <InventoryRow key={med.id} medication={med} today={today} />
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

@@ -23,14 +23,18 @@ values
    1, 4, 'parches', 5,
    'Solo hay 4 parches en existencia para un curso de 6 semanas (~42 dias). Confirmar con el medico si se requiere comprar mas 21mg antes de agotar.'),
 
+  -- Corrected 2026-07-20: spreadsheet says "por las noches" (at night); this row had it
+  -- at 08:00/"Al despertar" (morning), a real time-of-day conflict, not just interval math.
   ('11111111-1111-1111-1111-111111111103', 'Parche de Nicotina', '14mg', 'parche', '1 parche', 'transdermica',
-   'fixed_times', array['08:00'], null, null,
-   'Posterior al parche de 21mg. Al despertar.', '2 semanas (indicacion medica)', false, '2026-08-29', '2026-09-12',
+   'fixed_times', array['22:00'], null, null,
+   'Posterior al parche de 21mg. Por las noches.', '2 semanas (indicacion medica)', false, '2026-08-29', '2026-09-12',
    1, 7, 'parches', 5,
    'Inicia cuando termine el parche de 21mg. Solo 7 parches en existencia para un curso de 2 semanas (14 dias) — confirmar con el medico si se requieren mas.'),
 
+  -- Corrected 2026-07-20: original agenda transcription had times 4h/8h/12h apart (10:00,14:00,22:00),
+  -- not a true every-8h cadence. Actual prescription is every 8h from the 10:00 anchor dose.
   ('11111111-1111-1111-1111-111111111104', 'Paracetamol', '500mg', 'tableta', '2 tabletas', 'oral',
-   'fixed_times', array['10:00','14:00','22:00'], null, null,
+   'fixed_times', array['10:00','18:00','02:00'], null, null,
    'Con comida ligera si es posible', '5 dias', false, '2026-07-18', '2026-07-23',
    2, 17, 'tabletas', 3,
    'El curso completo (5 dias x 3 tomas x 2 tabletas) requiere 30 tabletas; solo hay 17.'),
@@ -40,8 +44,10 @@ values
    'Tomar con bastante agua, con el desayuno', 'sin suspencion', true, '2026-07-18', null,
    1, 27, 'tabletas', 7, null),
 
+  -- Corrected 2026-07-20: same meal-anchoring bug as Paracetamol — times were 6h/5h/13h apart,
+  -- not the prescribed every-8h cadence. Spread evenly through waking hours: 08:00, 16:00, 00:00.
   ('11111111-1111-1111-1111-111111111106', 'Lactulosa', '100ml/frasco', 'jarabe', '10 ml', 'oral',
-   'fixed_times', array['10:00','16:00','21:00'], null, null,
+   'fixed_times', array['08:00','16:00','00:00'], null, null,
    'Tomar con agua o jugo', 'sin suspencion', true, '2026-07-18', null,
    10, 125, 'ml', 5, null),
 
@@ -94,10 +100,6 @@ values
    1, null, 'parches', 7,
    'Existencia no reportada en la receta original — registrar manualmente en Inventario.')
 on conflict (id) do nothing;
-
--- Clonazepam is no longer given. Deactivated rather than deleted: keeps dose history
--- and unit count intact (traceability), just removed from the active rotation.
-update medications set active = false where id = '11111111-1111-1111-1111-111111111101';
 
 -- Historical record: Soloro 7 was already applied 2026-07-17, before this app existed.
 insert into dose_events (medication_id, scheduled_date, scheduled_time, status, actual_at, caregiver_name, notes)

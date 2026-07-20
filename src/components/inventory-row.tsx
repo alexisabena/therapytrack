@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { AlertTriangle, Pencil, Plus } from "lucide-react";
+import { AlertTriangle, Clock, Pencil, Plus } from "lucide-react";
 import type { Medication } from "@/lib/types";
 import { daysOfSupply, stockFlag } from "@/lib/schedule";
 import { adjustUnitsAction, restockUnitsAction } from "@/app/(app)/actions";
+import { MedicationForm } from "./medication-form";
 
 type Mode = "view" | "restock" | "correct";
 
@@ -12,10 +13,13 @@ export function InventoryRow({ medication, today }: { medication: Medication; to
   const [mode, setMode] = useState<Mode>("view");
   const [restockValue, setRestockValue] = useState("");
   const [correctValue, setCorrectValue] = useState(String(medication.units_on_hand ?? ""));
+  const [editingSchedule, setEditingSchedule] = useState(false);
   const [pending, startTransition] = useTransition();
 
-  const supply = daysOfSupply(medication);
-  const flag = stockFlag(medication, today);
+  // Burn-rate/low-stock framing assumes the medicine is actively being dosed at its
+  // stored cadence — misleading once it's out of rotation, so skip it entirely then.
+  const supply = medication.active ? daysOfSupply(medication) : null;
+  const flag = medication.active ? stockFlag(medication, today) : { low: false, reason: null };
 
   const addedUnits = Number(restockValue);
   const validAdd = restockValue.trim() !== "" && !Number.isNaN(addedUnits) && addedUnits > 0;
@@ -36,7 +40,12 @@ export function InventoryRow({ medication, today }: { medication: Medication; to
   }
 
   return (
-    <div className={`rounded-2xl border bg-white p-4 ${flag.low ? "border-amber-300" : "border-neutral-200"}`}>
+    <>
+    <div
+      className={`rounded-2xl border bg-white p-4 ${
+        flag.low ? "border-amber-300" : "border-neutral-200"
+      } ${medication.active ? "" : "opacity-60"}`}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-baseline gap-2 flex-wrap">
@@ -44,6 +53,7 @@ export function InventoryRow({ medication, today }: { medication: Medication; to
             <span className="text-sm text-neutral-500">{medication.strength}</span>
           </div>
           <p className="text-xs text-neutral-500 mt-0.5">{medication.duration_description}</p>
+          {!medication.active && <p className="text-xs font-semibold text-neutral-500 mt-0.5">Fuera de rotacion</p>}
         </div>
         {flag.low && <AlertTriangle size={20} className="text-amber-600 shrink-0" />}
       </div>
@@ -81,6 +91,13 @@ export function InventoryRow({ medication, today }: { medication: Medication; to
             className="flex items-center justify-center w-11 h-11 rounded-xl border border-neutral-300 text-neutral-500 active:bg-neutral-100"
           >
             <Pencil size={16} />
+          </button>
+          <button
+            onClick={() => setEditingSchedule(true)}
+            aria-label="Editar dosis y horario"
+            className="flex items-center justify-center w-11 h-11 rounded-xl border border-neutral-300 text-neutral-500 active:bg-neutral-100"
+          >
+            <Clock size={16} />
           </button>
         </div>
       )}
@@ -168,5 +185,8 @@ export function InventoryRow({ medication, today }: { medication: Medication; to
         </div>
       )}
     </div>
+
+    {editingSchedule && <MedicationForm medication={medication} onClose={() => setEditingSchedule(false)} />}
+    </>
   );
 }
