@@ -16,7 +16,7 @@ export function BottomNav() {
 
   return (
     <nav className="fixed bottom-0 inset-x-0 bg-white border-t border-neutral-200 pb-[env(safe-area-inset-bottom)] z-20">
-      <div className="max-w-md mx-auto grid grid-cols-5">
+      <div className="max-w-md mx-auto grid grid-cols-4">
         {ITEMS.map(({ href, label, icon: Icon }) => {
           const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
           return (

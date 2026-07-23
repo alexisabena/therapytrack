@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { AlertTriangle, Package, Pencil } from "lucide-react";
+import { AlertTriangle, MoreVertical, Package } from "lucide-react";
 import type { Medication, MedicationStatusEvent } from "@/lib/types";
 import { daysOfSupply, stockFlag } from "@/lib/schedule";
-import { adjustUnitsAction, restockUnitsAction } from "@/app/(app)/actions";
+import { useCaregiver } from "@/lib/caregiver-context";
+import { adjustUnitsAction, restockUnitsAction, setMedicationActiveAction } from "@/app/(app)/actions";
 import { MedicationForm } from "./medication-form";
 import { MedicationActiveToggle } from "./medication-active-toggle";
 
@@ -29,7 +30,9 @@ export function MedicationRow({
   today: string;
   statusEvents: MedicationStatusEvent[];
 }) {
+  const { name } = useCaregiver();
   const [editing, setEditing] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [stockMode, setStockMode] = useState<StockMode>("view");
   const [restockValue, setRestockValue] = useState("");
   const [correctValue, setCorrectValue] = useState(String(medication.units_on_hand ?? ""));
@@ -58,6 +61,11 @@ export function MedicationRow({
     setStockMode("view");
   }
 
+  function toggleActive() {
+    setMenuOpen(false);
+    startTransition(() => setMedicationActiveAction(medication.id, !medication.active, name ?? "Sin nombre"));
+  }
+
   return (
     <>
       <div
@@ -67,14 +75,46 @@ export function MedicationRow({
       >
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <div className="flex items-baseline gap-2 flex-wrap">
-              <span className="font-semibold text-neutral-900">{medication.name}</span>
-              <span className="text-sm text-neutral-500">{medication.strength}</span>
-            </div>
-            <p className="text-sm text-neutral-600 mt-0.5">{medication.dose_description}</p>
-            <p className="text-xs text-neutral-500 mt-1">{scheduleSummary(medication)}</p>
+            <span className="text-xl font-bold text-neutral-900 block truncate">{medication.name}</span>
+            <p className="text-sm text-neutral-600 mt-0.5">
+              {medication.strength}, {medication.route}
+            </p>
+            <p className="text-sm text-neutral-500 italic mt-1">{medication.dose_description}</p>
           </div>
-          {flag.low && <AlertTriangle size={20} className="text-amber-600 shrink-0" />}
+
+          <div className="relative shrink-0">
+            <button
+              onClick={() => setMenuOpen((o) => !o)}
+              aria-label="Mas opciones"
+              className="flex items-center justify-center w-11 h-11 rounded-xl border border-neutral-300 text-neutral-500 active:bg-neutral-100"
+            >
+              <MoreVertical size={18} />
+            </button>
+
+            {menuOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+                <div className="absolute right-0 top-full mt-1 w-52 rounded-xl border border-neutral-200 bg-white shadow-lg z-20 overflow-hidden">
+                  <button
+                    onClick={toggleActive}
+                    disabled={pending}
+                    className="w-full text-left px-4 py-3 text-sm font-medium text-red-700 active:bg-red-50 disabled:opacity-50"
+                  >
+                    {medication.active ? "Quitar del horario" : "Reactivar en el horario"}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setMenuOpen(false);
+                      setEditing(true);
+                    }}
+                    className="w-full text-left px-4 py-3 text-sm font-medium text-neutral-700 active:bg-neutral-50 border-t border-neutral-100"
+                  >
+                    Editar medicamento
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         <div className="mt-3 flex items-center justify-between">
@@ -88,12 +128,18 @@ export function MedicationRow({
           )}
         </div>
 
-        {flag.reason && <p className="text-xs text-amber-700 mt-1.5">{flag.reason}</p>}
+        {flag.low && flag.reason && (
+          <div className="mt-2 flex items-center gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2">
+            <AlertTriangle size={16} className="text-amber-600 shrink-0" />
+            <span className="text-xs text-amber-800">{flag.reason}</span>
+          </div>
+        )}
         {medication.units_on_hand == null && stockMode === "view" && (
           <p className="text-xs text-neutral-400 mt-1.5">Existencia no registrada</p>
         )}
 
-        <div className="mt-3">
+        <div className="mt-3 pt-3 border-t border-neutral-100">
+          <p className="text-xs text-neutral-500 mb-1.5">{scheduleSummary(medication)}</p>
           <MedicationActiveToggle medication={medication} statusEvents={statusEvents} />
         </div>
 
@@ -114,13 +160,6 @@ export function MedicationRow({
               className="flex items-center justify-center w-11 h-11 rounded-xl border border-neutral-300 text-neutral-500 active:bg-neutral-100 shrink-0"
             >
               <Package size={16} />
-            </button>
-            <button
-              onClick={() => setEditing(true)}
-              aria-label="Editar medicamento"
-              className="flex items-center justify-center w-11 h-11 rounded-xl border border-neutral-300 text-neutral-500 active:bg-neutral-100 shrink-0"
-            >
-              <Pencil size={16} />
             </button>
           </div>
         )}
