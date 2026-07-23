@@ -301,7 +301,7 @@ export type DaySummary = {
   total: number;
 };
 
-/** Administered/omitted/pending counts for a given day, for the "dias anteriores" lookback on the home screen. */
+/** Administered/omitted/pending counts for a given day, for the "días anteriores" lookback on the home screen. */
 export function summarizeDay(
   medications: Medication[],
   events: DoseEvent[],
@@ -331,11 +331,11 @@ export function stockFlag(med: Medication, todayStr: string): StockFlag {
   if (remaining != null && supply < remaining) {
     return {
       low: true,
-      reason: `Alcanza para ~${Math.floor(supply)} dias, pero el tratamiento continua ${remaining} dias mas`,
+      reason: `Alcanza para ~${Math.floor(supply)} días, pero el tratamiento continúa ${remaining} días más`,
     };
   }
   if (supply < med.low_stock_threshold_days) {
-    return { low: true, reason: `Alcanza para ~${Math.floor(supply)} dias` };
+    return { low: true, reason: `Alcanza para ~${Math.floor(supply)} días` };
   }
   return { low: false, reason: null };
 }

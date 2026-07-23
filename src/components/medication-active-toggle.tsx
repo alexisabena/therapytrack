@@ -34,7 +34,7 @@ export function MedicationActiveToggle({
     <div>
       <div className="flex items-center justify-between gap-2">
         <span className={`text-xs font-semibold ${medication.active ? "text-green-700" : "text-neutral-500"}`}>
-          {medication.active ? "En rotacion" : "Fuera de rotacion"}
+          {medication.active ? "En rotación" : "Fuera de rotación"}
         </span>
         {scheduleText && <span className="text-xs text-neutral-500">{scheduleText}</span>}
       </div>

@@ -62,7 +62,7 @@ export function DoseDrawer({
         <div className="mt-5 mb-6 rounded-2xl bg-neutral-50 border border-neutral-200 px-4 py-4 text-center">
           {medication.units_per_dose == null ? (
             <p className="text-sm text-neutral-500">
-              Existencia no se descuenta automaticamente — ajusta manualmente en Existencia.
+              Existencia no se descuenta automáticamente — ajusta manualmente en Existencia.
             </p>
           ) : medication.units_on_hand != null ? (
             <>
@@ -79,7 +79,7 @@ export function DoseDrawer({
         {scheduledTime != null && (
           <div className="mb-4">
             <label className="block text-xs font-medium text-neutral-600 mb-1.5">
-              Hora real (si fue distinta a la programada, incluso en dias pasados)
+              Hora real (si fue distinta a la programada, incluso en días pasados)
             </label>
             <input
               type="time"

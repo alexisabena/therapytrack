@@ -11,11 +11,11 @@ export default async function LoginPage({
     <div className="min-h-dvh flex items-center justify-center bg-neutral-50 px-4">
       <div className="w-full max-w-sm bg-white rounded-2xl shadow-sm border border-neutral-200 p-6">
         <h1 className="text-xl font-bold text-neutral-900 mb-1">Agenda de Medicamentos</h1>
-        <p className="text-sm text-neutral-500 mb-6">Ingresa el codigo compartido para continuar.</p>
+        <p className="text-sm text-neutral-500 mb-6">Ingresa el código compartido para continuar.</p>
 
         {error && (
           <p className="mb-4 rounded-lg bg-red-50 text-red-700 text-sm px-3 py-2 border border-red-200">
-            Codigo incorrecto. Intenta de nuevo.
+            Código incorrecto. Intenta de nuevo.
           </p>
         )}
 
@@ -23,7 +23,7 @@ export default async function LoginPage({
           <input type="hidden" name="next" value={next ?? "/"} />
           <div>
             <label htmlFor="pin" className="block text-sm font-medium text-neutral-700 mb-1">
-              Codigo
+              Código
             </label>
             <input
               id="pin"

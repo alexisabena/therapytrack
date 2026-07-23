@@ -8,7 +8,7 @@ import Link from "next/link";
 
 export const dynamic = "force-dynamic";
 
-const WEEKDAYS = ["domingo", "lunes", "martes", "miercoles", "jueves", "viernes", "sabado"];
+const WEEKDAYS = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
 
 function weekdayFor(dateStr: string): string {
   const [y, m, d] = dateStr.split("-").map(Number);
@@ -77,7 +77,7 @@ export default async function AhoraPage() {
       {prnMeds.length > 0 && (
         <section>
           <h2 className="text-sm font-bold uppercase tracking-wide text-neutral-500 mb-2">
-            Por razon necesaria (PRN)
+            Por razón necesaria (PRN)
           </h2>
           <div className="space-y-3">
             {prnMeds.map((med) => (

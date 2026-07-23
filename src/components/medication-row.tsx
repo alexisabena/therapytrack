@@ -12,10 +12,10 @@ import { MedicationActiveToggle } from "./medication-active-toggle";
 type StockMode = "view" | "restock" | "correct";
 
 function scheduleSummary(med: Medication): string {
-  if (med.schedule_type === "prn") return "Por razon necesaria (PRN)";
+  if (med.schedule_type === "prn") return "Por razón necesaria (PRN)";
   if (med.schedule_type === "weekly") {
     const days = med.weekly_interval_days ?? 7;
-    return days === 7 ? "Semanal" : `Cada ${days} dias`;
+    return days === 7 ? "Semanal" : `Cada ${days} días`;
   }
   if (med.times.length === 0) return "Sin horario";
   return med.times.join(", ");
@@ -85,7 +85,7 @@ export function MedicationRow({
           <div className="relative shrink-0">
             <button
               onClick={() => setMenuOpen((o) => !o)}
-              aria-label="Mas opciones"
+              aria-label="Más opciones"
               className="flex items-center justify-center w-11 h-11 rounded-xl border border-neutral-300 text-neutral-500 active:bg-neutral-100"
             >
               <MoreVertical size={18} />
@@ -123,7 +123,7 @@ export function MedicationRow({
           </span>
           {supply != null && (
             <span className={`text-sm font-medium ${flag.low ? "text-amber-700" : "text-neutral-500"}`}>
-              ~{Math.floor(supply)} dias
+              ~{Math.floor(supply)} días
             </span>
           )}
         </div>
@@ -170,7 +170,7 @@ export function MedicationRow({
         {stockMode === "restock" && (
           <div className="mt-3 rounded-xl bg-blue-50 border border-blue-200 p-3">
             <label className="block text-xs font-medium text-blue-900 mb-1.5">
-              ¿Cuantas {medication.units_label} compraste?
+              ¿Cuántas {medication.units_label} compraste?
             </label>
             <div className="flex items-center gap-2">
               <input

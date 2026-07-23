@@ -52,9 +52,9 @@ function NamePrompt({ knownCaregivers, onSelect }: { knownCaregivers: string[]; 
   return (
     <div className="min-h-dvh flex items-center justify-center bg-neutral-50 px-4">
       <div className="w-full max-w-sm bg-white rounded-2xl shadow-sm border border-neutral-200 p-6">
-        <h1 className="text-lg font-bold text-neutral-900 mb-1">¿Quien eres?</h1>
+        <h1 className="text-lg font-bold text-neutral-900 mb-1">¿Quién eres?</h1>
         <p className="text-sm text-neutral-500 mb-5">
-          Para saber quien confirmo cada dosis. Se recuerda en este telefono.
+          Para saber quién confirmó cada dosis. Se recuerda en este teléfono.
         </p>
         <div className="space-y-2 mb-4">
           {knownCaregivers.map((n) => (

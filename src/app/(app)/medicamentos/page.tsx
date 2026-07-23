@@ -41,7 +41,7 @@ export default async function MedicamentosPage() {
       )}
 
       <section>
-        <h2 className="text-sm font-bold uppercase tracking-wide text-neutral-500 mb-2">En rotacion</h2>
+        <h2 className="text-sm font-bold uppercase tracking-wide text-neutral-500 mb-2">En rotación</h2>
         {ok.length === 0 ? (
           <p className="text-sm text-neutral-500 bg-white rounded-2xl border border-neutral-200 px-4 py-6 text-center">
             Sin medicamentos activos.
@@ -57,7 +57,7 @@ export default async function MedicamentosPage() {
 
       {inactive.length > 0 && (
         <section>
-          <h2 className="text-sm font-bold uppercase tracking-wide text-neutral-500 mb-2">Fuera de rotacion</h2>
+          <h2 className="text-sm font-bold uppercase tracking-wide text-neutral-500 mb-2">Fuera de rotación</h2>
           <div className="space-y-3">
             {inactive.map((med) => (
               <MedicationRow key={med.id} medication={med} today={today} statusEvents={eventsFor(med.id)} />

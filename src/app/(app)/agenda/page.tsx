@@ -6,7 +6,7 @@ import { DoseCard } from "@/components/dose-card";
 
 export const dynamic = "force-dynamic";
 
-const WEEKDAYS = ["domingo", "lunes", "martes", "miercoles", "jueves", "viernes", "sabado"];
+const WEEKDAYS = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
 
 function shiftDate(dateStr: string, days: number): string {
   const [y, m, d] = dateStr.split("-").map(Number);
@@ -65,7 +65,7 @@ export default async function AgendaPage({
 
       {items.length === 0 && (
         <p className="text-sm text-neutral-500 bg-white rounded-2xl border border-neutral-200 px-4 py-6 text-center">
-          Sin medicamentos programados este dia.
+          Sin medicamentos programados este día.
         </p>
       )}
 
@@ -78,7 +78,7 @@ export default async function AgendaPage({
       {prnMeds.length > 0 && (
         <section>
           <h2 className="text-sm font-bold uppercase tracking-wide text-neutral-500 mb-2">
-            Por razon necesaria (PRN) — vigente este dia
+            Por razón necesaria (PRN) — vigente este día
           </h2>
           <div className="space-y-2">
             {prnMeds.map((med) => (

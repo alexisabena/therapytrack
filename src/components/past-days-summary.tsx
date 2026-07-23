@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ChevronDown, ChevronLeft } from "lucide-react";
 import type { DaySummary } from "@/lib/schedule";
 
-const WEEKDAYS = ["domingo", "lunes", "martes", "miercoles", "jueves", "viernes", "sabado"];
+const WEEKDAYS = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
 
 function weekdayFor(dateStr: string): string {
   const [y, m, d] = dateStr.split("-").map(Number);
@@ -52,7 +52,7 @@ export function PastDaysSummary({ days }: { days: DaySummary[] }) {
 
   return (
     <section>
-      <h2 className="text-sm font-bold uppercase tracking-wide text-neutral-500 mb-2">Dias anteriores</h2>
+      <h2 className="text-sm font-bold uppercase tracking-wide text-neutral-500 mb-2">Días anteriores</h2>
       <div className="space-y-2">
         <DayRow summary={latest} />
 
@@ -64,7 +64,7 @@ export function PastDaysSummary({ days }: { days: DaySummary[] }) {
               className="w-full flex items-center justify-center gap-1 text-xs font-medium text-neutral-500 py-2 min-h-[44px] active:text-neutral-800"
             >
               <ChevronDown size={14} className={expanded ? "rotate-180" : ""} />
-              {expanded ? "Ocultar dias anteriores" : `Ver ${rest.length} dia${rest.length !== 1 ? "s" : ""} mas`}
+              {expanded ? "Ocultar días anteriores" : `Ver ${rest.length} día${rest.length !== 1 ? "s" : ""} más`}
             </button>
           </>
         )}

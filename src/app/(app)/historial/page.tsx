@@ -19,12 +19,12 @@ export default async function HistorialPage() {
     <div className="px-4 pt-6 space-y-5">
       <header>
         <h1 className="text-2xl font-bold text-neutral-900">Historial</h1>
-        <p className="text-sm text-neutral-500">Ultimas dosis registradas.</p>
+        <p className="text-sm text-neutral-500">Últimas dosis registradas.</p>
       </header>
 
       {events.length === 0 && (
         <p className="text-sm text-neutral-500 bg-white rounded-2xl border border-neutral-200 px-4 py-6 text-center">
-          Aun no hay registros.
+          Aún no hay registros.
         </p>
       )}
 
