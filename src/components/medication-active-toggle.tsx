@@ -19,9 +19,11 @@ function formatDateTime(iso: string): string {
 export function MedicationActiveToggle({
   medication,
   statusEvents,
+  scheduleText,
 }: {
   medication: Medication;
   statusEvents: MedicationStatusEvent[];
+  scheduleText?: string;
 }) {
   const [historyOpen, setHistoryOpen] = useState(false);
 
@@ -30,9 +32,12 @@ export function MedicationActiveToggle({
 
   return (
     <div>
-      <span className={`text-xs font-semibold ${medication.active ? "text-green-700" : "text-neutral-500"}`}>
-        {medication.active ? "En rotacion" : "Fuera de rotacion"}
-      </span>
+      <div className="flex items-center justify-between gap-2">
+        <span className={`text-xs font-semibold ${medication.active ? "text-green-700" : "text-neutral-500"}`}>
+          {medication.active ? "En rotacion" : "Fuera de rotacion"}
+        </span>
+        {scheduleText && <span className="text-xs text-neutral-500">{scheduleText}</span>}
+      </div>
       {latest && (
         <p className="text-xs text-neutral-400 mt-0.5">
           {latest.active ? "Activo desde" : "Detenido"} {formatDateShort(latest.changed_at)}

@@ -139,8 +139,11 @@ export function MedicationRow({
         )}
 
         <div className="mt-3 pt-3 border-t border-neutral-100">
-          <p className="text-xs text-neutral-500 mb-1.5">{scheduleSummary(medication)}</p>
-          <MedicationActiveToggle medication={medication} statusEvents={statusEvents} />
+          <MedicationActiveToggle
+            medication={medication}
+            statusEvents={statusEvents}
+            scheduleText={scheduleSummary(medication)}
+          />
         </div>
 
         {stockMode === "view" && (
