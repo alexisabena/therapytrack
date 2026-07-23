@@ -10,7 +10,7 @@ Next.js (App Router) + TypeScript + Tailwind CSS + Supabase (Postgres, hosted).
 
 - **Ahora** (`/`) — what's due now/soon/overdue today, confirm or skip in one tap, PRN (as-needed) meds logged separately. Auto-refreshes every 60s.
 - **Agenda** (`/agenda`) — full-day schedule, any date, past or future.
-- **Existencia** (`/inventario`) — units on hand per medication, days-of-supply estimate, low-stock flags, manual correction after a pharmacy run.
+- **Medicamentos** (`/medicamentos`) — one card per medication: add new, edit dose/cadence, take out of/back into rotation, restock or correct units on hand, days-of-supply estimate, low-stock flags.
 - **Historial** (`/historial`) — log of every confirmed/skipped dose, who logged it, when.
 
 ## Data model

@@ -8,7 +8,6 @@ import type { Medication } from "@/lib/types";
 function revalidateAll() {
   revalidatePath("/");
   revalidatePath("/agenda");
-  revalidatePath("/inventario");
   revalidatePath("/historial");
   revalidatePath("/medicamentos");
 }

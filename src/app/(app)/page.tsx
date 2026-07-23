@@ -49,13 +49,13 @@ export default async function AhoraPage() {
 
       {lowStock.length > 0 && (
         <Link
-          href="/inventario"
+          href="/medicamentos"
           className="flex items-start gap-2.5 rounded-2xl bg-amber-50 border border-amber-300 px-4 py-3 active:bg-amber-100"
         >
           <AlertTriangle size={20} className="text-amber-600 shrink-0 mt-0.5" />
           <p className="text-sm text-amber-900">
             <span className="font-semibold">{lowStock.length === 1 ? "1 medicamento" : `${lowStock.length} medicamentos`} por agotarse:</span>{" "}
-            {lowStock.map((m) => m.name).join(", ")}. Revisar Existencia.
+            {lowStock.map((m) => m.name).join(", ")}. Revisar Medicamentos.
           </p>
         </Link>
       )}
