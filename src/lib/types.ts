@@ -9,6 +9,7 @@ export type Medication = {
   route: string;
   schedule_type: ScheduleType;
   times: string[]; // "HH:mm" local wall-clock, fixed_times only
+  interval_hours: number | null; // fixed_times only: gap between doses for rolling reanchor; null = irregular custom schedule
   weekly_anchor_date: string | null; // YYYY-MM-DD
   weekly_interval_days: number | null;
   condition_note: string | null;

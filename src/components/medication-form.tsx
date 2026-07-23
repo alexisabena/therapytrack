@@ -16,8 +16,17 @@ function initialFrequencyMode(med?: Medication): FrequencyMode {
   if (!med) return "every_8h";
   if (med.schedule_type === "weekly") return "weekly";
   if (med.schedule_type === "prn") return "prn";
+  if (med.interval_hours === 8) return "every_8h";
+  if (med.interval_hours === 12) return "every_12h";
+  if (med.interval_hours === 24) return "every_24h";
   return "custom";
 }
+
+const INTERVAL_HOURS_BY_MODE: Partial<Record<FrequencyMode, number>> = {
+  every_8h: 8,
+  every_12h: 12,
+  every_24h: 24,
+};
 
 export function MedicationForm({
   medication,
@@ -87,6 +96,7 @@ export function MedicationForm({
       route: route.trim(),
       schedule_type: frequencyMode === "weekly" ? "weekly" : frequencyMode === "prn" ? "prn" : "fixed_times",
       times: previewTimes,
+      interval_hours: INTERVAL_HOURS_BY_MODE[frequencyMode] ?? null,
       weekly_anchor_date: frequencyMode === "weekly" ? weeklyAnchorDate : null,
       weekly_interval_days: frequencyMode === "weekly" ? Number(weeklyIntervalDays) || 7 : null,
       condition_note: conditionNote.trim() || null,
@@ -205,6 +215,10 @@ export function MedicationForm({
               </Field>
               <p className="text-xs text-neutral-500 mt-2">
                 Horarios: <span className="font-medium text-neutral-700">{previewTimes.join(", ")}</span>
+              </p>
+              <p className="text-xs text-neutral-500 mt-1">
+                Este horario es solo el punto de partida: cada vez que se confirma una dosis, la siguiente se
+                recalcula desde esa hora real, no desde un horario fijo.
               </p>
             </div>
           )}

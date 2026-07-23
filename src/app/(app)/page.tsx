@@ -1,5 +1,5 @@
 import { AlertTriangle } from "lucide-react";
-import { getAllMedications, getEventsForDate, getEventsForDateRange, getMedicationStatusEvents } from "@/lib/data";
+import { getAllMedications, getEventsForDate, getEventsForDateRange, getLatestTakenByMedication, getMedicationStatusEvents } from "@/lib/data";
 import { activePrnMedications, addDays, getDueItemsForToday, nowInTz, stockFlag, summarizeDay } from "@/lib/schedule";
 import { DoseCard } from "@/components/dose-card";
 import { PrnCard } from "@/components/prn-card";
@@ -21,13 +21,14 @@ export default async function AhoraPage() {
   const now = nowInTz();
   const lookbackFrom = addDays(now.date, -LOOKBACK_DAYS);
   const lookbackTo = addDays(now.date, -1);
-  const [medications, events, pastEvents, statusEvents] = await Promise.all([
+  const [medications, events, pastEvents, statusEvents, latestTaken] = await Promise.all([
     getAllMedications(),
     getEventsForDate(now.date),
     getEventsForDateRange(lookbackFrom, lookbackTo),
     getMedicationStatusEvents(),
+    getLatestTakenByMedication(),
   ]);
-  const dueItems = getDueItemsForToday(medications, events, now);
+  const dueItems = getDueItemsForToday(medications, events, now, latestTaken);
   const prnMeds = activePrnMedications(medications);
   const lowStock = medications.filter((m) => m.active && stockFlag(m, now.date).low);
 
@@ -35,7 +36,7 @@ export default async function AhoraPage() {
   const done = dueItems.filter((i) => i.state === "done_taken" || i.state === "done_skipped");
 
   const pastDays = Array.from({ length: LOOKBACK_DAYS }, (_, i) => addDays(now.date, -(i + 1)))
-    .map((date) => summarizeDay(medications, pastEvents, statusEvents, date))
+    .map((date) => summarizeDay(medications, pastEvents, statusEvents, date, now.date, latestTaken))
     .filter((summary) => summary.total > 0);
 
   const weekday = weekdayFor(now.date);

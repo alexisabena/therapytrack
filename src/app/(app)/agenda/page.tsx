@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { getAllMedications, getEventsForDate, getMedicationStatusEvents } from "@/lib/data";
+import { getAllMedications, getEventsForDate, getLatestTakenByMedication, getMedicationStatusEvents } from "@/lib/data";
 import { activePrnMedicationsOnDate, getAgendaForDate, nowInTz } from "@/lib/schedule";
 import { DoseCard } from "@/components/dose-card";
 
@@ -24,12 +24,13 @@ export default async function AgendaPage({
   const today = nowInTz().date;
   const date = dateParam ?? today;
 
-  const [medications, events, statusEvents] = await Promise.all([
+  const [medications, events, statusEvents, latestTaken] = await Promise.all([
     getAllMedications(),
     getEventsForDate(date),
     getMedicationStatusEvents(),
+    getLatestTakenByMedication(),
   ]);
-  const items = getAgendaForDate(medications, events, statusEvents, date);
+  const items = getAgendaForDate(medications, events, statusEvents, date, today, latestTaken);
   const prnMeds = activePrnMedicationsOnDate(medications, statusEvents, date).filter(
     (m) => m.start_date <= date && (!m.course_end_date || m.course_end_date >= date)
   );

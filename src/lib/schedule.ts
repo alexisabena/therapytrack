@@ -56,6 +56,35 @@ function daysBetween(fromStr: string, toStr: string): number {
   return Math.round((to - from) / 86400000);
 }
 
+function localToEpochMinutes(dateStr: string, timeStr: string): number {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return Date.UTC(y, m - 1, d) / 60000 + toMinutes(timeStr);
+}
+
+/** Where a rolling-cadence medication's clock currently sits: the last real dose time if one
+ * exists, otherwise its configured starting time — the anchor future slots step forward from. */
+function rollingAnchor(med: Medication, lastTaken: DoseEvent | undefined): { date: string; time: string } {
+  if (lastTaken) return nowInTz(new Date(lastTaken.actual_at));
+  return { date: med.start_date, time: med.times[0] ?? "08:00" };
+}
+
+/** All rolling-cadence slot times landing on `dateStr`, stepping every `intervalHours` from `anchor`.
+ * Because our intervals always divide 24h evenly, this always yields the same count per day —
+ * a multi-day gap since the last dose doesn't create gaps or pile-ups, just keeps the same daily rhythm. */
+function rollingSlotsForDate(anchor: { date: string; time: string }, intervalHours: number, dateStr: string): string[] {
+  const intervalMinutes = intervalHours * 60;
+  const anchorEpoch = localToEpochMinutes(anchor.date, anchor.time);
+  const dayStartEpoch = localToEpochMinutes(dateStr, "00:00");
+  const kStart = Math.ceil((dayStartEpoch - anchorEpoch) / intervalMinutes);
+  const kEnd = Math.floor((dayStartEpoch + 1439 - anchorEpoch) / intervalMinutes);
+
+  const times: string[] = [];
+  for (let k = kStart; k <= kEnd; k++) {
+    times.push(minutesToHHMM(anchorEpoch + k * intervalMinutes - dayStartEpoch));
+  }
+  return times.sort();
+}
+
 function isWithinCourse(med: Medication, dateStr: string): boolean {
   if (dateStr < med.start_date) return false;
   if (med.course_end_date && dateStr > med.course_end_date) return false;
@@ -102,7 +131,8 @@ export function nextWeeklyDueDate(med: Medication, fromDate: string): string | n
 export function getDueItemsForToday(
   medications: Medication[],
   events: DoseEvent[],
-  now: { date: string; time: string }
+  now: { date: string; time: string },
+  latestTakenByMed: Record<string, DoseEvent> = {}
 ): DueItem[] {
   const items: DueItem[] = [];
 
@@ -111,7 +141,11 @@ export function getDueItemsForToday(
 
     if (med.schedule_type === "fixed_times") {
       if (!isWithinCourse(med, now.date)) continue;
-      for (const time of med.times) {
+      const slotTimes =
+        med.interval_hours != null
+          ? rollingSlotsForDate(rollingAnchor(med, latestTakenByMed[med.id]), med.interval_hours, now.date)
+          : med.times;
+      for (const time of slotTimes) {
         const event = findEvent(events, med.id, now.date, time);
         const state: DueState = event
           ? event.status === "taken"
@@ -173,12 +207,16 @@ export function activePrnMedicationsOnDate(
   return medications.filter((m) => m.schedule_type === "prn" && isActiveOnDate(statusEvents, m.id, dateStr));
 }
 
-/** Full agenda for a given date, including meds outside today (for browsing other days) and weekly items even if not due. */
+/** Full agenda for a given date, including meds outside today (for browsing other days) and weekly items even if not due.
+ * `today`/`latestTakenByMed` enable rolling-cadence reanchoring (see `interval_hours`) for today/future dates only —
+ * past days keep their originally-logged static times so history doesn't get silently rewritten by a later reanchor. */
 export function getAgendaForDate(
   medications: Medication[],
   events: DoseEvent[],
   statusEvents: MedicationStatusEvent[],
-  dateStr: string
+  dateStr: string,
+  today: string = dateStr,
+  latestTakenByMed: Record<string, DoseEvent> = {}
 ): DueItem[] {
   const items: DueItem[] = [];
   for (const med of medications) {
@@ -186,7 +224,11 @@ export function getAgendaForDate(
     if (!isWithinCourse(med, dateStr)) continue;
 
     if (med.schedule_type === "fixed_times") {
-      for (const time of med.times) {
+      const slotTimes =
+        med.interval_hours != null && dateStr >= today
+          ? rollingSlotsForDate(rollingAnchor(med, latestTakenByMed[med.id]), med.interval_hours, dateStr)
+          : med.times;
+      for (const time of slotTimes) {
         const event = findEvent(events, med.id, dateStr, time);
         const state: DueState = event
           ? event.status === "taken"
@@ -208,7 +250,7 @@ export function getAgendaForDate(
 
 /** Doses/day used for inventory burn-rate; null when it can't be derived (prn or missing dose size). */
 export function dosesPerDay(med: Medication): number | null {
-  if (med.schedule_type === "fixed_times") return med.times.length;
+  if (med.schedule_type === "fixed_times") return med.interval_hours != null ? 24 / med.interval_hours : med.times.length;
   if (med.schedule_type === "weekly") return 1 / (med.weekly_interval_days ?? 7);
   return null;
 }
@@ -241,9 +283,11 @@ export function summarizeDay(
   medications: Medication[],
   events: DoseEvent[],
   statusEvents: MedicationStatusEvent[],
-  dateStr: string
+  dateStr: string,
+  today: string = dateStr,
+  latestTakenByMed: Record<string, DoseEvent> = {}
 ): DaySummary {
-  const items = getAgendaForDate(medications, events, statusEvents, dateStr);
+  const items = getAgendaForDate(medications, events, statusEvents, dateStr, today, latestTakenByMed);
   let administered = 0;
   let omitted = 0;
   let pending = 0;
