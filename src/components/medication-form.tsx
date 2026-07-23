@@ -53,6 +53,7 @@ export function MedicationForm({
   const [unitsLabel, setUnitsLabel] = useState(medication?.units_label ?? "unidades");
   const [lowStockThresholdDays, setLowStockThresholdDays] = useState(String(medication?.low_stock_threshold_days ?? 5));
   const [notes, setNotes] = useState(medication?.notes ?? "");
+  const [graceMinutes, setGraceMinutes] = useState(medication?.grace_minutes != null ? String(medication.grace_minutes) : "");
 
   const [frequencyMode, setFrequencyMode] = useState<FrequencyMode>(initialFrequencyMode(medication));
   const [anchorTime, setAnchorTime] = useState(medication?.times?.[0] ?? "08:00");
@@ -88,6 +89,8 @@ export function MedicationForm({
   function submit() {
     if (!canSubmit || pending) return;
 
+    const intervalHours = INTERVAL_HOURS_BY_MODE[frequencyMode] ?? null;
+
     const input: MedicationInput = {
       name: name.trim(),
       strength: strength.trim(),
@@ -96,7 +99,12 @@ export function MedicationForm({
       route: route.trim(),
       schedule_type: frequencyMode === "weekly" ? "weekly" : frequencyMode === "prn" ? "prn" : "fixed_times",
       times: previewTimes,
-      interval_hours: INTERVAL_HOURS_BY_MODE[frequencyMode] ?? null,
+      interval_hours: intervalHours,
+      // Preserve the existing rolling-cadence anchor on edit (it should only move via reanchorAfterDose,
+      // not by re-saving the form) — only initialize it fresh when there wasn't one yet.
+      anchor_date: intervalHours != null ? medication?.anchor_date ?? startDate : null,
+      anchor_time: intervalHours != null ? medication?.anchor_time ?? anchorTime : null,
+      grace_minutes: graceMinutes.trim() === "" ? null : Number(graceMinutes),
       weekly_anchor_date: frequencyMode === "weekly" ? weeklyAnchorDate : null,
       weekly_interval_days: frequencyMode === "weekly" ? Number(weeklyIntervalDays) || 7 : null,
       condition_note: conditionNote.trim() || null,
@@ -217,10 +225,23 @@ export function MedicationForm({
                 Horarios: <span className="font-medium text-neutral-700">{previewTimes.join(", ")}</span>
               </p>
               <p className="text-xs text-neutral-500 mt-1">
-                Este horario es solo el punto de partida: cada vez que se confirma una dosis, la siguiente se
-                recalcula desde esa hora real, no desde un horario fijo.
+                Este horario es el ancla del ritmo. Una dosis dada un poco antes o despues (dentro del margen
+                de tolerancia) no mueve nada; solo un cambio real de rutina reancla el horario.
               </p>
             </div>
+          )}
+
+          {(frequencyMode === "every_8h" || frequencyMode === "every_12h" || frequencyMode === "every_24h") && (
+            <Field label="Margen de tolerancia en minutos (opcional, vacio = usar el default de la app)">
+              <input
+                type="number"
+                min={0}
+                value={graceMinutes}
+                onChange={(e) => setGraceMinutes(e.target.value)}
+                className={inputClass}
+                placeholder="90"
+              />
+            </Field>
           )}
 
           {frequencyMode === "custom" && (

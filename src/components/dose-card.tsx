@@ -15,13 +15,14 @@ export function DoseCard({ item }: { item: DueItem }) {
   const { medication, state, doseEvent, scheduledDate, scheduledTime } = item;
   const isDone = state === "done_taken" || state === "done_skipped";
 
-  function confirm(status: "taken" | "skipped") {
+  function confirm(status: "taken" | "skipped", actualAt?: string) {
     logDoseAction({
       medicationId: medication.id,
       scheduledDate,
       scheduledTime,
       status,
       caregiverName: name ?? "Sin nombre",
+      actualAt,
     });
   }
 
@@ -93,8 +94,10 @@ export function DoseCard({ item }: { item: DueItem }) {
       {drawerOpen && (
         <DoseDrawer
           medication={medication}
+          scheduledDate={scheduledDate}
+          scheduledTime={scheduledTime}
           onClose={() => setDrawerOpen(false)}
-          onConfirm={() => confirm("taken")}
+          onConfirm={(actualAt) => confirm("taken", actualAt)}
           onSkip={() => confirm("skipped")}
         />
       )}

@@ -10,6 +10,9 @@ export type Medication = {
   schedule_type: ScheduleType;
   times: string[]; // "HH:mm" local wall-clock, fixed_times only
   interval_hours: number | null; // fixed_times only: gap between doses for rolling reanchor; null = irregular custom schedule
+  anchor_date: string | null; // current rolling-cadence clock: YYYY-MM-DD, only moves when a dose lands outside grace_minutes
+  anchor_time: string | null; // current rolling-cadence clock: HH:mm
+  grace_minutes: number | null; // variance tolerated before reanchoring; null = app-wide default
   weekly_anchor_date: string | null; // YYYY-MM-DD
   weekly_interval_days: number | null;
   condition_note: string | null;

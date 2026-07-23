@@ -73,24 +73,6 @@ export async function getKnownCaregivers(): Promise<string[]> {
   return Array.from(seen.values()).sort((a, b) => a.localeCompare(b, "es"));
 }
 
-/** Most recent 'taken' dose per medication, used to reanchor rolling-cadence schedules
- * (see `interval_hours` in schedule.ts) to when a dose was actually given rather than a fixed clock time. */
-export async function getLatestTakenByMedication(): Promise<Record<string, DoseEvent>> {
-  const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("dose_events")
-    .select("*")
-    .eq("status", "taken")
-    .order("actual_at", { ascending: false });
-  if (error) throw error;
-
-  const latest: Record<string, DoseEvent> = {};
-  for (const event of data as DoseEvent[]) {
-    if (!latest[event.medication_id]) latest[event.medication_id] = event;
-  }
-  return latest;
-}
-
 export async function getRecentEvents(limit = 100): Promise<(DoseEvent & { medication: Medication })[]> {
   const supabase = await createClient();
   const { data, error } = await supabase

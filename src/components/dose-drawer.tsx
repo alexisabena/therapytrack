@@ -1,25 +1,33 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { X } from "lucide-react";
 import type { Medication } from "@/lib/types";
+import { localToInstant } from "@/lib/schedule";
 import { SwipeConfirm } from "./swipe-confirm";
 
 export function DoseDrawer({
   medication,
+  scheduledDate,
+  scheduledTime = null,
   onClose,
   onConfirm,
   onSkip,
 }: {
   medication: Medication;
+  scheduledDate?: string;
+  scheduledTime?: string | null;
   onClose: () => void;
-  onConfirm: () => void;
+  onConfirm: (actualAt?: string) => void;
   onSkip?: () => void;
 }) {
   const [pending, startTransition] = useTransition();
+  const [actualTime, setActualTime] = useState(scheduledTime ?? "");
 
   function handleConfirm() {
-    startTransition(() => onConfirm());
+    const actualAt =
+      scheduledDate && actualTime.trim() !== "" ? localToInstant(scheduledDate, actualTime).toISOString() : undefined;
+    startTransition(() => onConfirm(actualAt));
     setTimeout(onClose, 500);
   }
 
@@ -67,6 +75,20 @@ export function DoseDrawer({
             <p className="text-sm text-neutral-500">Existencia no registrada para este medicamento.</p>
           )}
         </div>
+
+        {scheduledTime != null && (
+          <div className="mb-4">
+            <label className="block text-xs font-medium text-neutral-600 mb-1.5">
+              Hora real (si fue distinta a la programada, incluso en dias pasados)
+            </label>
+            <input
+              type="time"
+              value={actualTime}
+              onChange={(e) => setActualTime(e.target.value)}
+              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-base"
+            />
+          </div>
+        )}
 
         <SwipeConfirm onConfirm={handleConfirm} disabled={pending} />
 

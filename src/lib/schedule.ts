@@ -61,11 +61,41 @@ function localToEpochMinutes(dateStr: string, timeStr: string): number {
   return Date.UTC(y, m - 1, d) / 60000 + toMinutes(timeStr);
 }
 
-/** Where a rolling-cadence medication's clock currently sits: the last real dose time if one
- * exists, otherwise its configured starting time — the anchor future slots step forward from. */
-function rollingAnchor(med: Medication, lastTaken: DoseEvent | undefined): { date: string; time: string } {
-  if (lastTaken) return nowInTz(new Date(lastTaken.actual_at));
-  return { date: med.start_date, time: med.times[0] ?? "08:00" };
+/** Mexico City has used fixed UTC-6 standard time year-round since 2022 (no DST) — safe to hardcode
+ * the offset when building a real instant from a caregiver-entered local date + time. */
+export function localToInstant(dateStr: string, timeStr: string): Date {
+  return new Date(`${dateStr}T${timeStr}:00-06:00`);
+}
+
+/** Variance tolerated before a rolling-cadence medication's anchor moves, when the medication
+ * doesn't specify its own `grace_minutes` — ask the prescribing doctor for the real per-medication
+ * tolerance rather than trusting this default long-term. */
+export const DEFAULT_GRACE_MINUTES = 90;
+
+/** A medication's current rolling-cadence anchor, or null if it isn't on a rolling cadence. */
+function currentAnchor(med: Medication): { date: string; time: string } | null {
+  if (med.interval_hours == null || !med.anchor_date || !med.anchor_time) return null;
+  return { date: med.anchor_date, time: med.anchor_time };
+}
+
+/** Whether a just-logged 'taken' dose should move the anchor: only when it lands outside the
+ * medication's grace window around the nearest expected slot — normal variance (running late
+ * because breakfast was late, etc.) is absorbed instead of silently compounding schedule drift. */
+export function reanchorAfterDose(med: Medication, actualAt: string): { date: string; time: string } | null {
+  const anchor = currentAnchor(med);
+  if (!anchor) return null;
+
+  const { date, time } = nowInTz(new Date(actualAt));
+  const actualEpoch = localToEpochMinutes(date, time);
+  const intervalMinutes = med.interval_hours! * 60;
+  const anchorEpoch = localToEpochMinutes(anchor.date, anchor.time);
+  const nearestK = Math.round((actualEpoch - anchorEpoch) / intervalMinutes);
+  const expectedEpoch = anchorEpoch + nearestK * intervalMinutes;
+
+  const graceMinutes = med.grace_minutes ?? DEFAULT_GRACE_MINUTES;
+  if (Math.abs(actualEpoch - expectedEpoch) <= graceMinutes) return null;
+
+  return { date, time };
 }
 
 /** All rolling-cadence slot times landing on `dateStr`, stepping every `intervalHours` from `anchor`.
@@ -131,8 +161,7 @@ export function nextWeeklyDueDate(med: Medication, fromDate: string): string | n
 export function getDueItemsForToday(
   medications: Medication[],
   events: DoseEvent[],
-  now: { date: string; time: string },
-  latestTakenByMed: Record<string, DoseEvent> = {}
+  now: { date: string; time: string }
 ): DueItem[] {
   const items: DueItem[] = [];
 
@@ -141,10 +170,8 @@ export function getDueItemsForToday(
 
     if (med.schedule_type === "fixed_times") {
       if (!isWithinCourse(med, now.date)) continue;
-      const slotTimes =
-        med.interval_hours != null
-          ? rollingSlotsForDate(rollingAnchor(med, latestTakenByMed[med.id]), med.interval_hours, now.date)
-          : med.times;
+      const anchor = currentAnchor(med);
+      const slotTimes = anchor ? rollingSlotsForDate(anchor, med.interval_hours!, now.date) : med.times;
       for (const time of slotTimes) {
         const event = findEvent(events, med.id, now.date, time);
         const state: DueState = event
@@ -208,15 +235,13 @@ export function activePrnMedicationsOnDate(
 }
 
 /** Full agenda for a given date, including meds outside today (for browsing other days) and weekly items even if not due.
- * `today`/`latestTakenByMed` enable rolling-cadence reanchoring (see `interval_hours`) for today/future dates only —
- * past days keep their originally-logged static times so history doesn't get silently rewritten by a later reanchor. */
+ * Rolling-cadence medications (see `interval_hours`) use their persisted anchor for every date, past or future —
+ * safe now that the anchor only moves deliberately (see `reanchorAfterDose`), not on every single dose. */
 export function getAgendaForDate(
   medications: Medication[],
   events: DoseEvent[],
   statusEvents: MedicationStatusEvent[],
-  dateStr: string,
-  today: string = dateStr,
-  latestTakenByMed: Record<string, DoseEvent> = {}
+  dateStr: string
 ): DueItem[] {
   const items: DueItem[] = [];
   for (const med of medications) {
@@ -224,10 +249,8 @@ export function getAgendaForDate(
     if (!isWithinCourse(med, dateStr)) continue;
 
     if (med.schedule_type === "fixed_times") {
-      const slotTimes =
-        med.interval_hours != null && dateStr >= today
-          ? rollingSlotsForDate(rollingAnchor(med, latestTakenByMed[med.id]), med.interval_hours, dateStr)
-          : med.times;
+      const anchor = currentAnchor(med);
+      const slotTimes = anchor ? rollingSlotsForDate(anchor, med.interval_hours!, dateStr) : med.times;
       for (const time of slotTimes) {
         const event = findEvent(events, med.id, dateStr, time);
         const state: DueState = event
@@ -283,11 +306,9 @@ export function summarizeDay(
   medications: Medication[],
   events: DoseEvent[],
   statusEvents: MedicationStatusEvent[],
-  dateStr: string,
-  today: string = dateStr,
-  latestTakenByMed: Record<string, DoseEvent> = {}
+  dateStr: string
 ): DaySummary {
-  const items = getAgendaForDate(medications, events, statusEvents, dateStr, today, latestTakenByMed);
+  const items = getAgendaForDate(medications, events, statusEvents, dateStr);
   let administered = 0;
   let omitted = 0;
   let pending = 0;

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { nowInTz } from "@/lib/schedule";
+import { nowInTz, reanchorAfterDose } from "@/lib/schedule";
 import type { Medication } from "@/lib/types";
 
 function revalidateAll() {
@@ -30,17 +30,33 @@ export async function logDoseAction(input: {
   status: "taken" | "skipped";
   caregiverName: string;
   notes?: string;
+  /** Real administration timestamp (ISO), for logging a dose retroactively at the hour it
+   * actually happened instead of "right now" — needed to keep rolling-cadence anchors accurate. */
+  actualAt?: string;
 }) {
   const supabase = await createClient();
   const medication = await getMedication(input.medicationId);
 
+  // If this dose lands outside the grace window, the anchor moves to match it — and this
+  // slot's own scheduled_time must move with it, or it'll stop matching on the next render
+  // (the day's slots are recomputed from the anchor every time, so an unmoved scheduled_time
+  // would silently orphan the very event we're about to insert).
+  let scheduledDate = input.scheduledDate;
+  let scheduledTime = input.scheduledTime;
+  const newAnchor = input.status === "taken" ? reanchorAfterDose(medication, input.actualAt ?? new Date().toISOString()) : null;
+  if (newAnchor) {
+    scheduledDate = newAnchor.date;
+    scheduledTime = newAnchor.time;
+  }
+
   const { error } = await supabase.from("dose_events").insert({
     medication_id: input.medicationId,
-    scheduled_date: input.scheduledDate,
-    scheduled_time: input.scheduledTime,
+    scheduled_date: scheduledDate,
+    scheduled_time: scheduledTime,
     status: input.status,
     caregiver_name: input.caregiverName || "Sin nombre",
     notes: input.notes ?? null,
+    ...(input.actualAt ? { actual_at: input.actualAt } : {}),
   });
   if (error) throw error;
 
@@ -50,6 +66,14 @@ export async function logDoseAction(input: {
       amount: medication.units_per_dose,
     });
     if (decError) throw decError;
+  }
+
+  if (newAnchor) {
+    const { error: anchorError } = await supabase
+      .from("medications")
+      .update({ anchor_date: newAnchor.date, anchor_time: newAnchor.time })
+      .eq("id", input.medicationId);
+    if (anchorError) throw anchorError;
   }
 
   revalidateAll();
